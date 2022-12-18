@@ -1,5 +1,5 @@
 <template>
-  <main></main>
+  <main>Роут для проверки удаления лупа</main>
 </template>
 
 <script lang="ts">
