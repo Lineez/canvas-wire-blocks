@@ -54,4 +54,8 @@ export class Rect {
   getPoints(): Point[] {
     return this.points;
   }
+
+  getIsAnyPointSelect(): boolean {
+    return !!this.points.find((point) => point.isSelect);
+  }
 }

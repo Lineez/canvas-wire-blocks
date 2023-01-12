@@ -7,6 +7,7 @@ export class Point {
   x: number;
   y: number;
   endPoint: Point | null;
+  isSelect: boolean;
 
   constructor(
     private position: PointPosition,
@@ -16,6 +17,7 @@ export class Point {
     this.x = this.rectBounds.x;
     this.y = this.rectBounds.y;
     this.endPoint = null;
+    this.isSelect = false;
     this.update(this.x, this.y);
   }
 
@@ -25,10 +27,10 @@ export class Point {
     // todo add update if width\height change
     if (this.position === "left") {
       this.x = x;
-      this.y = y + width / 2;
+      this.y = y + height / 2;
     } else if (this.position === "right") {
       this.x = x + width;
-      this.y = y + width / 2;
+      this.y = y + height / 2;
     } else if (this.position === "top") {
       this.x = x + width / 2;
       this.y = y;
@@ -40,13 +42,13 @@ export class Point {
 
   draw(ctx: CanvasRenderingContext2D) {
     // border
-    ctx.strokeStyle = "white";
+    ctx.strokeStyle = this.isSelect ? "orange" : "white";
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.stroke();
     // circle
-    ctx.fillStyle = "green";
+    ctx.fillStyle = this.isSelect ? "yellow" : "green";
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();

@@ -7,13 +7,15 @@
       @mousedown="mousedown"
       @mousemove="mousemove"
       @mouseup="mouseup"
-      @click="click"
     ></canvas>
 
     <div class="button-box">
       <button @click="addRect" class="button">add rect</button>
       <button @click="clearRect" class="button">clear rect</button>
       <button @click="clearLines" class="button">clear lines</button>
+      <button @click="randomizeRectSize" class="button">
+        randomize rect size
+      </button>
     </div>
   </main>
 </template>
@@ -27,31 +29,24 @@ import { Point } from "@/resourses/Point";
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 let raf: number;
-let lastTime = 0;
-// click
-let mouse = {
-  x: 0,
-  y: 0,
-};
-let lastPoint: Point | null = null;
+let selectedPoint: Point | null = null;
 // rect
 let rectStore: Rect[] = [];
 let currentRect: Rect | null = null;
+const rectSide = 100;
+let isRandomizeRectSize = false;
 
 export default defineComponent({
   mounted() {
     canvas = document.getElementById("canvas") as HTMLCanvasElement;
     ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
-    raf = requestAnimationFrame(this.animate);
   },
   unmounted() {
-    cancelAnimationFrame(raf);
+    this.stopLoop();
   },
   methods: {
-    animate(timestamp: number) {
-      const deltaTime = timestamp - lastTime;
-      lastTime = timestamp;
-      // console.log('deltaTime', deltaTime)
+    animate(loop: boolean) {
+      console.log("call loop");
       // clear
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -61,62 +56,98 @@ export default defineComponent({
       });
 
       // call loop
-      raf = requestAnimationFrame(this.animate);
+      if (loop) {
+        this.startLoop();
+      }
+    },
+    randomizeRectSize() {
+      isRandomizeRectSize = !isRandomizeRectSize;
+    },
+    getRectSize() {
+      if (!isRandomizeRectSize) return rectSide;
+      return rectSide * (Math.random() * 0.5 + 0.5);
+    },
+    startLoop(loop = false) {
+      raf = requestAnimationFrame(this.animate.bind(this, loop));
+    },
+    stopLoop() {
+      cancelAnimationFrame(raf);
     },
     addRect() {
       rectStore.push(
         new Rect(
-          canvas.width * Math.random(),
-          canvas.height * Math.random(),
-          100,
-          100
+          (canvas.width - rectSide) * Math.random(),
+          (canvas.height - rectSide) * Math.random(),
+          this.getRectSize(),
+          this.getRectSize()
         )
       );
+      this.startLoop();
     },
     clearRect() {
       rectStore = [];
+      this.startLoop();
     },
     clearLines() {
       rectStore.forEach((rect) => {
         rect.getPoints().forEach((point) => (point.endPoint = null));
       });
+      this.startLoop();
     },
-    click(e: MouseEvent) {
-      mouse.x = e.offsetX;
-      mouse.y = e.offsetY;
+    onPointClick(point: Point, rect: Rect) {
+      // select if point not selected
+      if (!selectedPoint) {
+        selectedPoint = point;
+        selectedPoint.isSelect = true;
+        return;
+      }
 
+      // ignore self rect
+      if (selectedPoint.isSelect === rect.getIsAnyPointSelect()) return;
+
+      // wire if has selectedPoint
+      selectedPoint.endPoint = point;
+      // and clear selectedPoint
+      selectedPoint.isSelect = false;
+      selectedPoint = null;
+      return;
+    },
+    mousedownHandler(e: MouseEvent) {
+      const { offsetX, offsetY } = e;
+      // see all rect and points
       for (const rect of rectStore) {
+        // detect point click
         for (const point of rect.getPoints()) {
-          if (this.isIntersect(point.getBounds(), e.offsetX, e.offsetY)) {
-            if (!lastPoint) {
-              lastPoint = point;
-              return;
-            }
-            if (lastPoint.x === point.x) return; // ignore self
-
-            console.log("lastPoint", lastPoint);
-            console.log("point", point);
-            lastPoint.endPoint = point;
-            lastPoint = null;
+          if (this.isIntersect(point.getBounds(), offsetX, offsetY)) {
+            this.onPointClick(point, rect);
             return;
           }
         }
+
+        // detect rect click
+        if (this.isIntersect(rect.getBounds(), offsetX, offsetY)) {
+          currentRect = rect;
+          return;
+        }
+      }
+      // miss
+      if (selectedPoint) {
+        selectedPoint.isSelect = false;
+        selectedPoint = null;
       }
     },
     mousedown(e: MouseEvent) {
-      for (const rect of rectStore) {
-        if (this.isIntersect(rect.getBounds(), e.offsetX, e.offsetY)) {
-          // detect rect click
-          currentRect = rect;
-        }
-      }
+      this.mousedownHandler(e);
+      this.startLoop();
     },
     mousemove(e: MouseEvent) {
+      // drag rect
       if (!currentRect) return;
-
       currentRect.update(e.offsetX, e.offsetY);
+      this.startLoop();
     },
     mouseup() {
+      // if drag rect -> stop it
       if (currentRect) {
         currentRect = null;
       }
