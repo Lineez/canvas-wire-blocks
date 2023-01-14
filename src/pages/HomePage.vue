@@ -97,17 +97,23 @@ export default defineComponent({
     onPointClick(point: Point, rect: Rect) {
       // select if point not selected
       if (!selectedPoint) {
+        point.isSelect = true;
         selectedPoint = point;
-        selectedPoint.isSelect = true;
         return;
       }
 
-      // ignore self rect
-      if (selectedPoint.isSelect === rect.getIsAnyPointSelect()) return;
+      // ignore self rect wire
+      // if is @selectedPoint has one parent with @point - select @point (choose broter point as @selectedPoint)
+      if (selectedPoint.isSelect === rect.getIsAnyPointSelect()) {
+        selectedPoint.isSelect = false;
+        point.isSelect = true;
+        selectedPoint = point;
+        return;
+      }
 
-      // wire if has selectedPoint
+      // wire if has @selectedPoint
       selectedPoint.endPoint = point;
-      // and clear selectedPoint
+      // and clear @selectedPoint
       selectedPoint.isSelect = false;
       selectedPoint = null;
       return;
@@ -115,7 +121,8 @@ export default defineComponent({
     mousedownHandler(e: MouseEvent) {
       const { offsetX, offsetY } = e;
       // see all rect and points
-      for (const rect of rectStore) {
+      for (let i = rectStore.length - 1; i > -1; i--) {
+        const rect = rectStore[i];
         // detect point click
         for (const point of rect.getPoints()) {
           if (this.isIntersect(point.getBounds(), offsetX, offsetY)) {
