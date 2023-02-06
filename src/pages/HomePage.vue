@@ -7,23 +7,37 @@
       @mousedown="mousedown"
       @mousemove="mousemove"
       @mouseup="mouseup"
+      @contextmenu="contextmenu"
     ></canvas>
 
     <div class="button-box">
-      <button @click="addRect" class="button">add rect</button>
-      <button @click="clearRect" class="button">clear rect</button>
-      <button @click="clearLines" class="button">clear lines</button>
-      <button @click="randomizeRectSize" class="button">
-        randomize rect size
+      <button
+        v-for="button in items"
+        :key="button.name"
+        @click="button.action"
+        class="button"
+      >
+        {{ button.name }}
       </button>
+    </div>
+    <div class="description">
+      <ul>
+        <li>Use context menu to action</li>
+        <li>Add / Drag / Wire / Delete rect</li>
+        <li>Add / Wire / Delete lines</li>
+        <li>Randomize rect size (for new added)</li>
+      </ul>
     </div>
   </main>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { Rect, RectBounds } from "@/resourses/Rect";
+import { Rect } from "@/resourses/Rect";
 import { Point } from "@/resourses/Point";
+import { isIntersect } from "@/resourses/isIntersect";
+import { MouseButtons } from "@/resourses/enums";
+import { ContextMenuContructor, ContextMenuOption } from "@/resourses/Menu";
 
 // global
 let canvas: HTMLCanvasElement;
@@ -35,14 +49,43 @@ let rectStore: Rect[] = [];
 let currentRect: Rect | null = null;
 const rectSide = 100;
 let isRandomizeRectSize = false;
+// contextmenu
+let contextMenu: ContextMenuContructor | undefined;
+
+interface Data {
+  items: ContextMenuOption[];
+}
 
 export default defineComponent({
+  data(): Data {
+    return {
+      items: [
+        {
+          name: "add rect",
+          action: () => this.addRect(),
+        },
+        {
+          name: "clear rect",
+          action: () => this.clearRect(),
+        },
+        {
+          name: "clear lines",
+          action: () => this.clearLines(),
+        },
+        {
+          name: "randomize rect size (toggle (for new added))",
+          action: () => this.randomizeRectSize(),
+        },
+      ],
+    };
+  },
   mounted() {
     canvas = document.getElementById("canvas") as HTMLCanvasElement;
     ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
   },
   unmounted() {
     this.stopLoop();
+    contextMenu?.remove();
   },
   methods: {
     animate(loop: boolean) {
@@ -125,25 +168,31 @@ export default defineComponent({
         const rect = rectStore[i];
         // detect point click
         for (const point of rect.getPoints()) {
-          if (this.isIntersect(point.getBounds(), offsetX, offsetY)) {
+          if (isIntersect(point.getBounds(), offsetX, offsetY)) {
             this.onPointClick(point, rect);
             return;
           }
         }
 
         // detect rect click
-        if (this.isIntersect(rect.getBounds(), offsetX, offsetY)) {
+        if (isIntersect(rect.getBounds(), offsetX, offsetY)) {
           currentRect = rect;
           return;
         }
       }
       // miss
+      // unselect @selectedPoint
       if (selectedPoint) {
         selectedPoint.isSelect = false;
         selectedPoint = null;
       }
+      // close @contextMenu
+      if (contextMenu?.isMenuOpen) {
+        contextMenu.isMenuOpen = false;
+      }
     },
     mousedown(e: MouseEvent) {
+      if (e.button === MouseButtons.right) return;
       this.mousedownHandler(e);
       this.startLoop();
     },
@@ -153,19 +202,28 @@ export default defineComponent({
       currentRect.update(e.offsetX, e.offsetY);
       this.startLoop();
     },
-    mouseup() {
+    mouseup(e: MouseEvent) {
+      if (e.button === MouseButtons.right) return;
       // if drag rect -> stop it
       if (currentRect) {
         currentRect = null;
       }
     },
-    isIntersect(rect: RectBounds, x: number, y: number) {
-      return !(
-        x < rect.x ||
-        x > rect.x + rect.width ||
-        y < rect.y ||
-        y > rect.y + rect.height
-      );
+    contextmenu(e: MouseEvent) {
+      e.preventDefault();
+      // add @contextMenu
+      if (!contextMenu) {
+        contextMenu = new ContextMenuContructor(this.items);
+        document.body.append(contextMenu.create(e.offsetY, e.offsetX));
+        return;
+      }
+
+      // open @contextMenu if closed
+      if (!contextMenu.isMenuOpen) {
+        contextMenu.isMenuOpen = true;
+      }
+      // update position instead of recreate
+      contextMenu.updatePosition(e.offsetY, e.offsetX);
     },
   },
 });
@@ -175,10 +233,12 @@ export default defineComponent({
 #canvas {
   border: 1px solid #000;
 }
+
 .button-box {
   display: flex;
   column-gap: 10px;
 }
+
 .button {
   display: flex;
   align-items: center;
@@ -188,9 +248,38 @@ export default defineComponent({
   border: 1px solid green;
   color: green;
   transition: all 0.3s ease-in;
+
   &:hover {
     background-color: green;
     color: #fff;
+  }
+}
+
+.contextmenu {
+  position: absolute;
+  z-index: 2;
+  display: none;
+
+  &.open {
+    display: block;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    min-height: 30px;
+    background-color: gray;
+    transition: all 0.3s linear;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #000;
+    }
+
+    &:hover {
+      cursor: pointer;
+      background-color: gainsboro;
+    }
   }
 }
 </style>
