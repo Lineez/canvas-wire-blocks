@@ -1,2 +1,0 @@
-"use strict";(self["webpackChunkvue_default_ts"]=self["webpackChunkvue_default_ts"]||[]).push([[443],{807:function(u,e,n){n.r(e),n.d(e,{default:function(){return c}});var t=n(252);function r(u,e,n,r,a,f){return(0,t.wg)(),(0,t.iD)("main",null,"Роут для проверки удаления лупа")}var a=(0,t.aZ)({}),f=n(744);const s=(0,f.Z)(a,[["render",r]]);var c=s}}]);
-//# sourceMappingURL=about.33e137fd.js.map
