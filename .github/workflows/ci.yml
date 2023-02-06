@@ -1,24 +1,21 @@
-name: CI # название скрипта: будет отображаться во вкладке Actions
+name: CI
 
-on: [push] # действие, по которому запускается данный скрипт
+on: [push]
 
-jobs: # роботы, которые будут выполняться
-  build: # сборка, которая..
-    runs-on: ubuntu-latest # ..будет запущена на основе этого образа
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-    steps: # шаги которые будут проделаны после запуска образа
-      - name: Checout
-        uses: actions/checkout@v1 # переход в самую актуальную ветку
-      - name: Install node
-        uses: actions/setup-node@v1
-        with:
-          node-wersion: "16.13.1"
-      - run: yarn install
-      - run: yarn build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install and Build
+        run: |
+          yarn
+          yarn build
+
       - name: Deploy
-        uses: crazy-max/ghaction-github-pages
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          target_branch: gh-pages
-          build_dir: dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          folder: build
