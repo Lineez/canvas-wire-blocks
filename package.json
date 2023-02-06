@@ -2,6 +2,7 @@
   "name": "vue-default-ts",
   "version": "0.1.0",
   "private": true,
+  "engines": {"node": "16.13.1"},
   "scripts": {
     "dev": "vue-cli-service serve --open --host localhost",
     "dev:prod": "yarn serve --mode production",
